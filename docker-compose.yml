@@ -1,0 +1,10 @@
+version: "2"
+
+services:
+  app:
+    image: harbor.ath.tamu.edu/ait/authproxy:latest
+    build: .
+    volumes:
+      - ./tenants.json:/usr/src/app/tenants.json
+    ports:
+      - 3000:3000
