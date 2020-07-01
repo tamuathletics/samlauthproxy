@@ -120,7 +120,7 @@ app.post('/login/callback/:appid',
         email: req.user['http://schemas.microsoft.com/identity/claims/emailaddress'],
       }, tenant.jwtsecret, { 
         issuer: 'authproxy.ath.tamy.edu',
-        expiresIn: "2 days"
+        expiresIn: ( tenant.tokenlife || "2 days" )
       }
     )
     var returnUrl = new URL(tenant['returnUrl'])
