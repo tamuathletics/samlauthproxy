@@ -117,7 +117,7 @@ app.post('/login/callback/:appid',
     let token = jwt.sign({
         user: req.user.nameID,
         username: req.user.onpremisessamaccount,
-        email: req.user['http://schemas.microsoft.com/identity/claims/displayname'],
+        email: req.user['http://schemas.microsoft.com/identity/claims/emailaddress'],
       }, tenant.jwtsecret, { 
         issuer: 'authproxy.ath.tamy.edu',
         expiresIn: "2 days"
