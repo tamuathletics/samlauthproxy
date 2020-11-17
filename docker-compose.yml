@@ -2,7 +2,7 @@ version: "2"
 
 services:
   app:
-    image: harbor.ath.tamu.edu/ait/authproxy:latest
+    image: harbor.ath.tamu.edu/ait/authproxy:1.1
     build: .
     volumes:
       - ./tenants.json:/usr/src/app/tenants.json
