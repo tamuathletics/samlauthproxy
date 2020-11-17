@@ -5,7 +5,7 @@ Authproxy can serve as middleware for SPAs to delegate complex authentication me
 ## How to enroll
 An application must be added to the tenant registry first in order to use the `authproxy`. Collaborate with the service provider to enroll your app. You will need to provide:
 - a description of your application
-- a `returnUrl` where the user will be sent after successful authentication
+- a `returnUrl` where the user will be sent after successful authentication, by default if no other returnUrl is provided
 
 After enrolling, you will be assigned a:
 - `loginUrl` where you should redirect unauthenticated users to
@@ -13,7 +13,7 @@ After enrolling, you will be assigned a:
 
 ## How to use
 
-Your application should maintain authentication status of your users, and if a user is found to be unauthenticated or their token expired, your application should 302 redirect them to the `loginUrl` assigned to the app.
+Your application should maintain authentication status of your users, and if a user is found to be unauthenticated or their token expired, your application should 302 redirect them to the `loginUrl` assigned to the app. You may optionally provide a `returnUrl` param to override the default value.
 
 After successful authentication, the user will be 302 redirected to your `returnUrl` with a `token` value in the query string in the format of a JWT. Example:
 
@@ -39,3 +39,11 @@ Your application should follow [best practices](https://stormpath.com/blog/where
 
 Your backend should ensure the presented token has a valid signature and that the server's current time is between the issued and expiration dates every time a private resource is accessed.
 
+
+## Testing
+
+To test or develop this app (not integrating it), you'll need to host a public accessible endpoint for Azure SAML to callback.
+
+I create an ngrok tunnel with: `ngrok http 3000`, and updating the `tenants.json` and the Azure application SAML settings with the https hostname given.
+
+To test, send your browser to `http://localhost:3000/login/1?returnUrl=http://localhost:3000/authReturnTest`. Check the console for any errors.

@@ -8,6 +8,7 @@ var app = express();
 
 var passport = require('passport');
 var saml = require('passport-saml');
+const { decode } = require("punycode");
 
 passport.serializeUser(function(user, done) {
     done(null, user);
@@ -55,17 +56,26 @@ app.use(bodyParser.json({limit: '50mb'}));
 app.use(bodyParser.urlencoded({limit: '50mb', extended: false}));
 
 app.get('/', (req, res) => {
-    res.status(301).redirect('https://helpdesk.athletics.tamu.edu')
+    res.status(301).redirect('https://help.athletics.tamu.edu')
 })
 
 app.get('/login/:appid',
   function (req, res, next) {
     let appid = req.params.appid
+    
+    
     let tenant = findTenantByAppId(appid)
     if(tenant) {
+      let returnUrl = req.query.returnUrl || tenant.returnUrl
+      console.log(`return url is found to be: ${returnUrl}`)
       console.log(`Login request for tenant '${tenant.description}' (ID: ${appid})`)
       passport.use(tenant.samlStrategy)
-      passport.authenticate('saml', { failureRedirect: '/login/fail' })(req,res,next)
+      passport.authenticate('saml', 
+        { 
+          additionalParams: {'RelayState': encodeURI(returnUrl)},
+          failureRedirect: '/login/fail'
+        }
+      )(req,res,next)
     } else {
       let msg = 'Tenant ID not found'
       console.log(`Login request for unknown tenant: ${appid}`)
@@ -104,7 +114,11 @@ app.post('/login/callback/:appid',
       res.locals.tenant = tenant
       console.log("setting saml strategy")
       passport.use(tenant.samlStrategy)
-      passport.authenticate('saml', { failureRedirect: '/login/fail' })(req,res,next)
+      passport.authenticate('saml',
+        {
+          failureRedirect: '/login/fail'
+        }
+      )(req,res,next)
     } else {
       res.status(404).json({error: "Tenant ID not found"});
     }
@@ -113,13 +127,16 @@ app.post('/login/callback/:appid',
     let tenant = res.locals.tenant
     console.log(`Authorized user ${req.user.nameID} for app ${tenant.description} (ID: ${tenant.appId})`)
     console.log(req.user)
+    console.log(req.body)
     // res.json(req.user)
     let token = jwt.sign({
         user: req.user.nameID,
         username: req.user.onpremisessamaccount,
+        displayname: req.user.displayname,
         email: req.user['http://schemas.microsoft.com/identity/claims/emailaddress'],
+        tenantid: tenant.appId,
       }, tenant.jwtsecret, { 
-        issuer: 'authproxy.ath.tamy.edu',
+        issuer: 'authproxy.ath.tamu.edu',
         expiresIn: ( tenant.tokenlife || "2 days" )
       }
     )
@@ -132,6 +149,32 @@ app.post('/login/callback/:appid',
 app.get('/login/fail', 
   function(req, res) {
     res.status(401).send('Login failed');
+  }
+);
+
+app.get('/authReturnTest',
+  function(req, res) {
+    let token = req.query.token
+    var output = "<h1>Auth proxy test</h1>"
+    if(!token) throw "No token provided"
+    
+    var decodedtoken = jwt.decode(token)
+
+    if(!decodedtoken) throw "Token failed to decode"
+    if(!decodedtoken.tenantid) throw "No tenant ID inside token"
+
+    let tenant = findTenantByAppId(decodedtoken.tenantid)
+
+    if(!tenant) "Invalid or unknown tenant ID"
+    console.log(tenant.jwtsecret)
+
+    jwt.verify(token, tenant.jwtsecret, function(err, decoded) {
+      if(err) throw err
+      output = output + "<p>Token validated successfully</p>"
+      output = output + `Token:<br>${JSON.stringify(decoded)}`
+    })
+      
+    res.send(output)
   }
 );
 
