@@ -6,5 +6,7 @@ services:
     build: .
     volumes:
       - ./tenants.json:/usr/src/app/tenants.json
+      - ./server.js:/usr/src/app/server.js
     ports:
       - 3000:3000
+    command: npm run dev
