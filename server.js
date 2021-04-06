@@ -21,7 +21,7 @@ passport.deserializeUser(function(user, done) {
 let tenants = getTenants();
 console.log(`DEBUG: Tenant data is ${tenants}`)
 
-function getTenants() {
+async function getTenants() {
   if(process.env.tenant_secret) {
     console.log("Assuming to be running on GCP. Fetching tenant secret")
     // Import the Secret Manager client and instantiate it:
