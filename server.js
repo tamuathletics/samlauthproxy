@@ -18,9 +18,26 @@ passport.deserializeUser(function(user, done) {
     done(null, user);
 });
 
+let tenants = getTenants();
+console.log(`DEBUG: Tenant data is ${tenants}`)
 
-let tenantRawData = fs.readFileSync('./tenants.json')
-let tenants = JSON.parse(tenantRawData)
+function getTenants() {
+  if(process.env.tenant_secret) {
+    console.log("Assuming to be running on GCP. Fetching tenant secret")
+    // Import the Secret Manager client and instantiate it:
+    const {SecretManagerServiceClient} = require('@google-cloud/secret-manager');
+    const client = new SecretManagerServiceClient();
+  
+    const [version] = await this.secretClient.accessSecretVersion({
+      name: `${process.env.tenant_secret}/versions/latest`,
+    });
+    return version.payload.data.toString()
+
+  } else {
+    let tenantRawData = fs.readFileSync(_dirname + '/../tenants.json')
+    return JSON.parse(tenantRawData)
+  }
+}
 
 tenants.forEach(tenant => {
   tenant['samlStrategy'] = new saml.Strategy({
