@@ -18,9 +18,6 @@ passport.deserializeUser(function(user, done) {
     done(null, user);
 });
 
-let tenants = getTenants();
-console.log(`DEBUG: Tenant data is ${tenants}`)
-
 async function getTenants() {
   if(process.env.tenant_secret) {
     console.log("Assuming to be running on GCP. Fetching tenant secret")
@@ -28,30 +25,43 @@ async function getTenants() {
     const {SecretManagerServiceClient} = require('@google-cloud/secret-manager');
     const client = new SecretManagerServiceClient();
   
-    const [version] = await this.secretClient.accessSecretVersion({
+    const [version] = await client.accessSecretVersion({
       name: `${process.env.tenant_secret}/versions/latest`,
     });
-    return version.payload.data.toString()
-
+    
+    return Promise.resolve(JSON.parse(version.payload.data.toString()))
   } else {
-    let tenantRawData = fs.readFileSync(_dirname + '/../tenants.json')
+    console.log("Running natively")
+    let tenantRawData = fs.readFileSync(__dirname + '/tenants.json')
     return JSON.parse(tenantRawData)
   }
 }
 
-tenants.forEach(tenant => {
-  tenant['samlStrategy'] = new saml.Strategy({
-    callbackUrl: tenant['callbackUrl'],
-    entryPoint: tenant['entryPoint'],
-    issuer: tenant['issuer'],
-    identifierFormat: null,
-    cert: tenant['idpCert'],
-    validateInResponseTo: false,
-    disableRequestedAuthnContext: true
-  }, function(profile, done) {
-    return done(null, profile); 
+var tenants = {}
+
+getTenants()
+  .then( tenantData => {
+    tenants = tenantData
+    // console.log()
+    tenantData.forEach(tenant => {
+      tenant['samlStrategy'] = new saml.Strategy({
+        callbackUrl: tenant['callbackUrl'],
+        entryPoint: tenant['entryPoint'],
+        issuer: tenant['issuer'],
+        identifierFormat: null,
+        cert: tenant['idpCert'],
+        validateInResponseTo: false,
+        disableRequestedAuthnContext: true
+      }, function(profile, done) {
+        return done(null, profile); 
+      })
+    })
   })
-})
+  .catch(err => {
+    console.log(`Error occured getting tenants: ${err}`)
+  })
+
+
 
 var findTenantByAppId = ( id => {
   console.log("looking for tenant id " + id)
