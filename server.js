@@ -42,7 +42,7 @@ var tenants = {}
 getTenants()
   .then( tenantData => {
     tenants = tenantData
-    // console.log()
+    console.log(` Tenant data: ${tenantData}`)
     tenantData.forEach(tenant => {
       tenant['samlStrategy'] = new saml.Strategy({
         callbackUrl: tenant['callbackUrl'],
