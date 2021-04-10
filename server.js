@@ -43,6 +43,7 @@ getTenants()
   .then( tenantData => {
     tenants = tenantData
     console.log(` Tenant data: ${tenantData}`)
+    console.log(tenants.constructor.name)
     tenantData.forEach(tenant => {
       tenant['samlStrategy'] = new saml.Strategy({
         callbackUrl: tenant['callbackUrl'],
@@ -63,7 +64,7 @@ getTenants()
 
 
 
-var findTenantByAppId = ( id => {
+var findTenantByAppId = ( (id, tenants) => {
   console.log("looking for tenant id " + id)
   return tenants.find(t => {
     return t['appId'] == id
@@ -90,8 +91,12 @@ app.get('/login/:appid',
   function (req, res, next) {
     let appid = req.params.appid
     
-    
-    let tenant = findTenantByAppId(appid)
+    if (!tenants.length) {
+      res.status(503).send('Tenant data unavailable')
+      return
+    }
+
+    let tenant = findTenantByAppId(appid, tenants)
     if(tenant) {
       let returnUrl = req.query.returnUrl || tenant.returnUrl
       console.log(`return url is found to be: ${returnUrl}`)
@@ -136,7 +141,7 @@ app.get('/login/:appid',
 app.post('/login/callback/:appid',
   (req, res, next) => {
     console.log("in saml callback for tenant " + req.params.appid)
-    let tenant = findTenantByAppId(req.params.appid)
+    let tenant = findTenantByAppId(req.params.appid, tenants)
     if(tenant) {
       res.locals.tenant = tenant
       console.log("setting saml strategy")
@@ -190,7 +195,7 @@ app.get('/authReturnTest',
     if(!decodedtoken) throw "Token failed to decode"
     if(!decodedtoken.tenantid) throw "No tenant ID inside token"
 
-    let tenant = findTenantByAppId(decodedtoken.tenantid)
+    let tenant = findTenantByAppId(decodedtoken.tenantid, tenants)
 
     if(!tenant) "Invalid or unknown tenant ID"
     console.log(tenant.jwtsecret)
